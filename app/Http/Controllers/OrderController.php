@@ -1,19 +1,24 @@
 <?php
+
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-class OrderController extends Controller {
-    public function checkout(Request $request) {
+class OrderController extends Controller
+{
+    public function checkout(Request $request)
+    {
         $request->validate([
-            'shipping_address' => 'required|string',
+            'shipping_address'  => 'required|string',
+            'payment_method'    => 'required|in:bank_transfer,qris',
         ]);
 
         $carts = Cart::with('book')->where('user_id', auth()->id())->get();
+
         if ($carts->isEmpty()) {
             return back()->with('error', 'Keranjang kosong.');
         }
@@ -25,7 +30,7 @@ class OrderController extends Controller {
                 'user_id'          => auth()->id(),
                 'total_price'      => $total,
                 'shipping_address' => $request->shipping_address,
-                'payment_method'   => 'payment_at_delivery',
+                'payment_method'   => $request->payment_method,
                 'note'             => $request->note,
                 'status'           => 'pending',
             ]);
@@ -37,19 +42,23 @@ class OrderController extends Controller {
                     'quantity' => $cart->quantity,
                     'price'    => $cart->book->price,
                 ]);
+
                 $cart->book->decrement('stock', $cart->quantity);
             }
 
             Cart::where('user_id', auth()->id())->delete();
         });
 
-        return redirect('/orders')->with('success', 'Pesanan berhasil dibuat! Bayar saat buku tiba.');
+        return redirect('/orders')->with('success', 'Pesanan berhasil dibuat!');
     }
 
-    public function myOrders() {
-        $orders = Order::with('orderItems.book')
-                    ->where('user_id', auth()->id())
-                    ->latest()->get();
+    public function myOrders()
+    {
+        $orders = Order::where('user_id', auth()->id())
+                    ->with('orderItems.book')
+                    ->latest()
+                    ->get();
+
         return view('orders.index', compact('orders'));
     }
 }

@@ -41,4 +41,24 @@ class CartController extends Controller {
         Cart::where('id', $id)->where('user_id', auth()->id())->delete();
         return back()->with('success', 'Item dihapus dari keranjang.');
     }
+
+    public function update(Request $request, $id)
+{
+    $request->validate([
+        'quantity' => 'required|integer|min:1'
+    ]);
+
+    $cart = Cart::findOrFail($id);
+
+    // Cek stok
+    if ($request->quantity > $cart->book->stock) {
+        return back()->with('error', 'Stok tidak cukup!');
+    }
+
+    $cart->update([
+        'quantity' => $request->quantity
+    ]);
+
+    return back()->with('success', 'Jumlah berhasil diupdate!');
+}
 }
